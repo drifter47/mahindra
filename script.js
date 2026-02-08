@@ -175,19 +175,60 @@ function addItem() {
 }
 
 // Handle accessory dropdown selection
+// Part number mapping - UPDATE THESE PART NUMBERS AS NEEDED
+const PART_NUMBERS = {
+    // Exterior
+    'Mud Flaps': 'MF-001',
+    'Side Steps': 'SS-001',
+    'Roof Rails': 'RR-001',
+    'Door Visor': 'DV-001',
+    'Body Cover': 'BC-001',
+    'Bumper Guard': 'BG-001',
+    'Bull Bar': 'BB-001',
+    'Tail Lamp Garnish': 'TG-001',
+    'Chrome Kit': 'CK-001',
+    // Interior
+    'Seat Cover': 'SC-001',
+    'Floor Mats': 'FM-001',
+    'Dashboard Kit': 'DK-001',
+    'Steering Cover': 'STC-001',
+    'Sun Shade': 'SSH-001',
+    'Neck Pillow': 'NP-001',
+    'Cushion Set': 'CS-001',
+    // Electronics
+    'Reverse Camera': 'RC-001',
+    'Parking Sensors': 'PS-001',
+    'Music System': 'MS-001',
+    'Speaker Set': 'SPK-001',
+    'LED Lights': 'LED-001',
+    'Fog Lamps': 'FL-001',
+    // Other
+    'First Aid Kit': 'FAK-001',
+    'Tool Kit': 'TK-001',
+    'Jerry Can': 'JC-001',
+    'Tow Hook': 'TH-001'
+};
+
 function handleAccessorySelect(select) {
     const card = select.closest('.item-card');
     const customGroup = card.querySelector('.custom-item-group');
     const customInput = card.querySelector('.custom-item-input');
+    const partNoInput = card.querySelector('input[name="partNo[]"]');
 
     if (select.value === 'custom') {
         customGroup.classList.remove('hidden');
         customInput.required = true;
         customInput.focus();
+        partNoInput.value = ''; // Clear part number for custom items
     } else {
         customGroup.classList.add('hidden');
         customInput.required = false;
         customInput.value = '';
+
+        // Auto-fill part number
+        if (PART_NUMBERS[select.value]) {
+            partNoInput.value = PART_NUMBERS[select.value];
+        }
     }
 }
 
