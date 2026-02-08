@@ -58,6 +58,34 @@
                         <input type="text" id="otfNo" name="otfNo" placeholder="Enter OTF Number" required>
                     </div>
 
+                    <!-- OTF Photo Upload -->
+                    <div class="form-group">
+                        <label>OTF Photo</label>
+                        <div class="photo-upload-container">
+                            <div class="photo-preview-area" id="photoPreviewArea">
+                                <div class="photo-placeholder" id="photoPlaceholder">
+                                    <span class="photo-icon">📷</span>
+                                    <span class="photo-text">No photo uploaded</span>
+                                </div>
+                                <img id="photoPreview" class="photo-preview hidden" alt="OTF Preview">
+                                <button type="button" class="photo-remove-btn hidden" id="photoRemoveBtn"
+                                    title="Remove photo">×</button>
+                            </div>
+                            <div class="photo-buttons">
+                                <label class="photo-btn photo-btn-camera" for="cameraInput">
+                                    <span>📸</span> Camera
+                                </label>
+                                <label class="photo-btn photo-btn-gallery" for="galleryInput">
+                                    <span>🖼️</span> Gallery
+                                </label>
+                                <input type="file" id="cameraInput" accept="image/*" capture="environment"
+                                    class="hidden-input">
+                                <input type="file" id="galleryInput" accept="image/*" class="hidden-input">
+                            </div>
+                        </div>
+                        <span class="helper-text">Upload a photo of the OTF document</span>
+                    </div>
+
                     <!-- Customer Details -->
                     <div class="section-title">Customer Details</div>
 

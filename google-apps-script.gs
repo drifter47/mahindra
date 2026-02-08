@@ -17,6 +17,7 @@
 
 // Sheet configuration
 const SHEET_NAME = 'Orders'; // Name of the sheet tab
+const PHOTOS_FOLDER_NAME = 'OTF_Photos'; // Folder name for storing photos in Google Drive
 
 /**
  * Handle GET requests - Retrieve orders
@@ -57,6 +58,17 @@ function doPost(e) {
     // Generate base serial number (resets daily)
     const baseSlNo = generateDailySerialNumber(sheet);
     
+    // Handle photo upload to Google Drive
+    let photoUrl = '';
+    if (data.photo && data.photo.startsWith('data:image')) {
+      try {
+        photoUrl = savePhotoToDrive(data.photo, baseSlNo, data.otfNo || 'unknown');
+      } catch (photoError) {
+        Logger.log('Photo save error: ' + photoError.message);
+        // Continue without photo if there's an error
+      }
+    }
+    
     // Get items array from the data
     const items = data.items || [];
     
@@ -75,6 +87,7 @@ function doPost(e) {
         data.totalAmount || 0,
         data.status || 'Pending',
         data.remarks || '',
+        photoUrl,
         new Date()
       ];
       sheet.appendRow(row);
@@ -98,6 +111,7 @@ function doPost(e) {
           data.totalAmount || 0,              // Total Amount (order total)
           data.status || 'Pending',           // Status
           data.remarks || '',                 // Remarks
+          index === 0 ? photoUrl : '',        // Photo URL (only on first item)
           new Date()                          // Timestamp
         ];
       });
@@ -112,6 +126,7 @@ function doPost(e) {
       success: true, 
       slNo: baseSlNo,
       itemCount: items.length || 1,
+      photoUrl: photoUrl,
       message: 'Order saved successfully' 
     });
   } catch (error) {
@@ -146,6 +161,7 @@ function getOrCreateSheet() {
       'Total Amount',
       'Status',
       'Remarks',
+      'Photo URL',
       'Timestamp'
     ];
     
@@ -173,7 +189,8 @@ function getOrCreateSheet() {
     sheet.setColumnWidth(10, 100); // Total Amount
     sheet.setColumnWidth(11, 100); // Status
     sheet.setColumnWidth(12, 150); // Remarks
-    sheet.setColumnWidth(13, 150); // Timestamp
+    sheet.setColumnWidth(13, 200); // Photo URL
+    sheet.setColumnWidth(14, 150); // Timestamp
   }
   
   return sheet;
@@ -217,6 +234,53 @@ function createJsonResponse(data) {
 }
 
 /**
+ * Save photo to Google Drive and return the URL
+ */
+function savePhotoToDrive(base64Data, slNo, otfNo) {
+  // Get or create the photos folder
+  const folder = getOrCreateFolder(PHOTOS_FOLDER_NAME);
+  
+  // Extract the base64 content and content type
+  const matches = base64Data.match(/^data:image\/(\w+);base64,(.+)$/);
+  if (!matches) {
+    throw new Error('Invalid image data format');
+  }
+  
+  const imageType = matches[1]; // e.g., 'jpeg', 'png'
+  const base64Content = matches[2];
+  
+  // Decode the base64 string
+  const blob = Utilities.newBlob(
+    Utilities.base64Decode(base64Content),
+    `image/${imageType}`,
+    `OTF_${otfNo}_${slNo}.${imageType === 'jpeg' ? 'jpg' : imageType}`
+  );
+  
+  // Create the file in Drive
+  const file = folder.createFile(blob);
+  
+  // Make the file viewable by anyone with the link
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  
+  // Return the view URL
+  return file.getUrl();
+}
+
+/**
+ * Get or create a folder in Google Drive
+ */
+function getOrCreateFolder(folderName) {
+  const folders = DriveApp.getFoldersByName(folderName);
+  
+  if (folders.hasNext()) {
+    return folders.next();
+  }
+  
+  // Create the folder if it doesn't exist
+  return DriveApp.createFolder(folderName);
+}
+
+/**
  * Test function - Run this to verify the script works
  * Click the ▶️ button to run, then check View > Logs
  */
@@ -248,6 +312,7 @@ function testPost() {
         totalAmount: 1000,
         status: 'Pending',
         remarks: 'Test entry',
+        photo: '', // No photo for test (would be base64 string in real usage)
         items: [
           { description: 'Floor Mat', partNo: 'FM-001', amount: 500 },
           { description: 'Seat Cover', partNo: 'SC-001', amount: 500 }

@@ -1,6 +1,6 @@
 // ===== Configuration =====
 // Replace this URL with your Google Apps Script Web App URL after deployment
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyduBHDWBMwpToBXgo8VdfZrwljAWD7PLdjG5a1RSWBzgM4TnBB-rdsI6ES7AKZERep/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwt94QhodDBL34XJJDaVGjL_qpwr64CsmQol6cGlwPwfiPALMgT4F-xliCnIbOhq-bE/exec';
 
 // ===== DOM Elements =====
 const orderForm = document.getElementById('orderForm');
@@ -21,10 +21,19 @@ const toast = document.getElementById('toast');
 const itemsContainer = document.getElementById('itemsContainer');
 const addItemBtn = document.getElementById('addItemBtn');
 
+// Photo upload elements
+const cameraInput = document.getElementById('cameraInput');
+const galleryInput = document.getElementById('galleryInput');
+const photoPreview = document.getElementById('photoPreview');
+const photoPlaceholder = document.getElementById('photoPlaceholder');
+const photoPreviewArea = document.getElementById('photoPreviewArea');
+const photoRemoveBtn = document.getElementById('photoRemoveBtn');
+
 // ===== State =====
 let orders = [];
 let dailyCounter = 1;
 let itemCount = 1;
+let photoBase64 = null; // Store the photo as base64
 
 // ===== Accessories Configuration =====
 // Add/modify accessories here - partNo can be empty if multiple part numbers exist
@@ -408,6 +417,11 @@ function setupEventListeners() {
     // Refresh orders
     refreshBtn.addEventListener('click', fetchOrders);
 
+    // Photo upload handlers
+    cameraInput.addEventListener('change', handlePhotoUpload);
+    galleryInput.addEventListener('change', handlePhotoUpload);
+    photoRemoveBtn.addEventListener('click', removePhoto);
+
     // Date change - check if we need to reset serial number
     dateInput.addEventListener('change', () => {
         const selectedDate = new Date(dateInput.value).toDateString();
@@ -471,7 +485,8 @@ async function handleFormSubmit(e) {
         totalAmount: totalAmount,
         status: document.getElementById('status').value,
         remarks: document.getElementById('remarks').value.trim(),
-        items: items // Keep structured data for local storage
+        items: items, // Keep structured data for local storage
+        photo: photoBase64 // Include photo in form data
     };
 
     try {
@@ -514,6 +529,7 @@ async function handleFormSubmit(e) {
         initializeDate();
         updateSerialNumberDisplay();
         resetItems();
+        resetPhoto();
         initializeFirstDropdown(); // Refresh dropdown with updated usage stats
 
     } catch (error) {
@@ -675,4 +691,96 @@ function formatAmount(amount) {
         minimumFractionDigits: 0,
         maximumFractionDigits: 2
     });
+}
+
+// ===== Photo Upload Functions =====
+function handlePhotoUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        showToast('Please select an image file', 'error');
+        return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+        showToast('Image size must be less than 10MB', 'error');
+        return;
+    }
+
+    // Show loading state
+    photoPreviewArea.classList.add('loading');
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        // Compress the image before storing
+        compressImage(e.target.result, 800, 0.7, (compressedBase64) => {
+            photoBase64 = compressedBase64;
+
+            // Update UI
+            photoPreview.src = compressedBase64;
+            photoPreview.classList.remove('hidden');
+            photoPlaceholder.classList.add('hidden');
+            photoRemoveBtn.classList.remove('hidden');
+            photoPreviewArea.classList.add('has-photo');
+            photoPreviewArea.classList.remove('loading');
+
+            showToast('Photo uploaded successfully', 'success');
+        });
+    };
+    reader.onerror = function () {
+        photoPreviewArea.classList.remove('loading');
+        showToast('Error reading file', 'error');
+    };
+    reader.readAsDataURL(file);
+
+    // Clear the input so the same file can be selected again
+    event.target.value = '';
+}
+
+function removePhoto() {
+    photoBase64 = null;
+    photoPreview.src = '';
+    photoPreview.classList.add('hidden');
+    photoPlaceholder.classList.remove('hidden');
+    photoRemoveBtn.classList.add('hidden');
+    photoPreviewArea.classList.remove('has-photo');
+    showToast('Photo removed', 'info');
+}
+
+function resetPhoto() {
+    photoBase64 = null;
+    photoPreview.src = '';
+    photoPreview.classList.add('hidden');
+    photoPlaceholder.classList.remove('hidden');
+    photoRemoveBtn.classList.add('hidden');
+    photoPreviewArea.classList.remove('has-photo');
+}
+
+function compressImage(base64, maxWidth, quality, callback) {
+    const img = new Image();
+    img.onload = function () {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Calculate new dimensions
+        if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Get compressed base64
+        const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+        callback(compressedBase64);
+    };
+    img.src = base64;
 }
