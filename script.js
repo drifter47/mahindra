@@ -26,14 +26,105 @@ let orders = [];
 let dailyCounter = 1;
 let itemCount = 1;
 
+// ===== Accessories Configuration =====
+// Add/modify accessories here - partNo can be empty if multiple part numbers exist
+const ACCESSORIES = [
+    { name: 'Alloy Wheels', partNo: '' },
+    { name: 'Body Side Molding Kit', partNo: '' },
+    { name: 'Car Audio', partNo: '' },
+    { name: 'Car Charger', partNo: '' },
+    { name: 'Car Body Cover', partNo: '' },
+    { name: 'Cargo Chain', partNo: '' },
+    { name: 'Floor Mat', partNo: '' },
+    { name: 'Fog Lamp', partNo: '' },
+    { name: 'Horn', partNo: '' },
+    { name: 'Infotainment System', partNo: '' },
+    { name: 'Mud Flap', partNo: '' },
+    { name: 'Front Parking Sensor', partNo: '' },
+    { name: 'Perfume', partNo: '' },
+    { name: 'Power Window', partNo: '' },
+    { name: 'Rain Visor', partNo: '' },
+    { name: 'Remote Central Lock', partNo: '' },
+    { name: 'Reverse Camera', partNo: '' },
+    { name: 'Roof Carrier', partNo: '' },
+    { name: 'Roof Rail', partNo: '' },
+    { name: 'Scuff Plate', partNo: '' },
+    { name: 'Seat Cover', partNo: '' },
+    { name: 'Side Step', partNo: '' },
+    { name: 'Side Step Flap', partNo: '' },
+    { name: 'Speaker', partNo: '' },
+    { name: 'Spoiler', partNo: '' },
+    { name: 'Steering Cover', partNo: '' },
+    { name: 'Sun Shade Set', partNo: '' },
+    { name: 'Wheel Cover', partNo: '' },
+    { name: 'Underbody', partNo: '' },
+    { name: 'Paint Protection Film', partNo: '' }
+];
+
+// Get/save usage stats from localStorage
+function getAccessoryUsage() {
+    return JSON.parse(localStorage.getItem('accessoryUsage') || '{}');
+}
+
+function incrementAccessoryUsage(name) {
+    const usage = getAccessoryUsage();
+    usage[name] = (usage[name] || 0) + 1;
+    localStorage.setItem('accessoryUsage', JSON.stringify(usage));
+}
+
+// Get sorted accessories (frequently used first)
+function getSortedAccessories() {
+    const usage = getAccessoryUsage();
+    const frequent = [], others = [];
+
+    ACCESSORIES.forEach(acc => {
+        if (usage[acc.name] >= 1) {
+            frequent.push({ ...acc, count: usage[acc.name] });
+        } else {
+            others.push(acc);
+        }
+    });
+
+    frequent.sort((a, b) => b.count - a.count);
+    return { frequent, others };
+}
+
+// Generate dropdown HTML dynamically
+function generateDropdownHTML() {
+    const { frequent, others } = getSortedAccessories();
+    let html = '<option value="">-- Select Accessory --</option>';
+
+    if (frequent.length > 0) {
+        html += '<optgroup label="⭐ Frequently Used">';
+        frequent.forEach(a => html += `<option value="${a.name}">${a.name}</option>`);
+        html += '</optgroup>';
+    }
+
+    html += '<optgroup label="All Accessories">';
+    others.forEach(a => html += `<option value="${a.name}">${a.name}</option>`);
+    html += '</optgroup>';
+
+    html += '<optgroup label="Other"><option value="custom">✏️ Custom Item...</option></optgroup>';
+    return html;
+}
+
 // ===== Initialize App =====
 document.addEventListener('DOMContentLoaded', () => {
     initializeTheme();
     initializeDate();
     initializeSerialNumber();
+    initializeFirstDropdown();
     setupEventListeners();
     calculateTotal();
 });
+
+// Initialize the first accessory dropdown
+function initializeFirstDropdown() {
+    const firstSelect = document.getElementById('firstAccessorySelect');
+    if (firstSelect) {
+        firstSelect.innerHTML = generateDropdownHTML();
+    }
+}
 
 // ===== Theme Management =====
 function initializeTheme() {
@@ -104,42 +195,7 @@ function addItem() {
         <div class="form-group">
             <label>Select Accessory <span class="required">*</span></label>
             <select name="accessorySelect[]" class="accessory-select" onchange="handleAccessorySelect(this)" required>
-                <option value="">-- Select Accessory --</option>
-                <optgroup label="Exterior">
-                    <option value="Mud Flaps">Mud Flaps</option>
-                    <option value="Side Steps">Side Steps</option>
-                    <option value="Roof Rails">Roof Rails</option>
-                    <option value="Door Visor">Door Visor</option>
-                    <option value="Body Cover">Body Cover</option>
-                    <option value="Bumper Guard">Bumper Guard</option>
-                    <option value="Bull Bar">Bull Bar</option>
-                    <option value="Tail Lamp Garnish">Tail Lamp Garnish</option>
-                    <option value="Chrome Kit">Chrome Kit</option>
-                </optgroup>
-                <optgroup label="Interior">
-                    <option value="Seat Cover">Seat Cover</option>
-                    <option value="Floor Mats">Floor Mats</option>
-                    <option value="Dashboard Kit">Dashboard Kit</option>
-                    <option value="Steering Cover">Steering Cover</option>
-                    <option value="Sun Shade">Sun Shade</option>
-                    <option value="Neck Pillow">Neck Pillow</option>
-                    <option value="Cushion Set">Cushion Set</option>
-                </optgroup>
-                <optgroup label="Electronics">
-                    <option value="Reverse Camera">Reverse Camera</option>
-                    <option value="Parking Sensors">Parking Sensors</option>
-                    <option value="Music System">Music System</option>
-                    <option value="Speaker Set">Speaker Set</option>
-                    <option value="LED Lights">LED Lights</option>
-                    <option value="Fog Lamps">Fog Lamps</option>
-                </optgroup>
-                <optgroup label="Other">
-                    <option value="First Aid Kit">First Aid Kit</option>
-                    <option value="Tool Kit">Tool Kit</option>
-                    <option value="Jerry Can">Jerry Can</option>
-                    <option value="Tow Hook">Tow Hook</option>
-                    <option value="custom">✏️ Custom Item...</option>
-                </optgroup>
+                ${generateDropdownHTML()}
             </select>
         </div>
         <div class="form-group custom-item-group hidden">
@@ -174,40 +230,11 @@ function addItem() {
     updateItemNumbers();
 }
 
-// Handle accessory dropdown selection
-// Part number mapping - UPDATE THESE PART NUMBERS AS NEEDED
-const PART_NUMBERS = {
-    // Exterior
-    'Mud Flaps': 'MF-001',
-    'Side Steps': 'SS-001',
-    'Roof Rails': 'RR-001',
-    'Door Visor': 'DV-001',
-    'Body Cover': 'BC-001',
-    'Bumper Guard': 'BG-001',
-    'Bull Bar': 'BB-001',
-    'Tail Lamp Garnish': 'TG-001',
-    'Chrome Kit': 'CK-001',
-    // Interior
-    'Seat Cover': 'SC-001',
-    'Floor Mats': 'FM-001',
-    'Dashboard Kit': 'DK-001',
-    'Steering Cover': 'STC-001',
-    'Sun Shade': 'SSH-001',
-    'Neck Pillow': 'NP-001',
-    'Cushion Set': 'CS-001',
-    // Electronics
-    'Reverse Camera': 'RC-001',
-    'Parking Sensors': 'PS-001',
-    'Music System': 'MS-001',
-    'Speaker Set': 'SPK-001',
-    'LED Lights': 'LED-001',
-    'Fog Lamps': 'FL-001',
-    // Other
-    'First Aid Kit': 'FAK-001',
-    'Tool Kit': 'TK-001',
-    'Jerry Can': 'JC-001',
-    'Tow Hook': 'TH-001'
-};
+// Get part number for accessory from ACCESSORIES array
+function getPartNo(name) {
+    const acc = ACCESSORIES.find(a => a.name === name);
+    return acc ? acc.partNo : '';
+}
 
 function handleAccessorySelect(select) {
     const card = select.closest('.item-card');
@@ -219,15 +246,16 @@ function handleAccessorySelect(select) {
         customGroup.classList.remove('hidden');
         customInput.required = true;
         customInput.focus();
-        partNoInput.value = ''; // Clear part number for custom items
+        partNoInput.value = '';
     } else {
         customGroup.classList.add('hidden');
         customInput.required = false;
         customInput.value = '';
 
-        // Auto-fill part number
-        if (PART_NUMBERS[select.value]) {
-            partNoInput.value = PART_NUMBERS[select.value];
+        // Auto-fill part number if available
+        const partNo = getPartNo(select.value);
+        if (partNo) {
+            partNoInput.value = partNo;
         }
     }
 }
@@ -426,6 +454,13 @@ async function handleFormSubmit(e) {
             showToast('Order submitted successfully!', 'success');
         }
 
+        // Track accessory usage for smart sorting
+        items.forEach(item => {
+            if (item.description && item.description !== 'custom') {
+                incrementAccessoryUsage(item.description);
+            }
+        });
+
         // Increment serial number for next order
         incrementSerialNumber();
 
@@ -434,6 +469,7 @@ async function handleFormSubmit(e) {
         initializeDate();
         updateSerialNumberDisplay();
         resetItems();
+        initializeFirstDropdown(); // Refresh dropdown with updated usage stats
 
     } catch (error) {
         console.error('Submission error:', error);
