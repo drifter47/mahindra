@@ -102,8 +102,49 @@ function addItem() {
             <button type="button" class="remove-item-btn" onclick="removeItem(this)" title="Remove item">×</button>
         </div>
         <div class="form-group">
-            <label>Item Description <span class="required">*</span></label>
-            <input type="text" name="itemDescription[]" placeholder="Accessory name/description" required>
+            <label>Select Accessory <span class="required">*</span></label>
+            <select name="accessorySelect[]" class="accessory-select" onchange="handleAccessorySelect(this)" required>
+                <option value="">-- Select Accessory --</option>
+                <optgroup label="Exterior">
+                    <option value="Mud Flaps">Mud Flaps</option>
+                    <option value="Side Steps">Side Steps</option>
+                    <option value="Roof Rails">Roof Rails</option>
+                    <option value="Door Visor">Door Visor</option>
+                    <option value="Body Cover">Body Cover</option>
+                    <option value="Bumper Guard">Bumper Guard</option>
+                    <option value="Bull Bar">Bull Bar</option>
+                    <option value="Tail Lamp Garnish">Tail Lamp Garnish</option>
+                    <option value="Chrome Kit">Chrome Kit</option>
+                </optgroup>
+                <optgroup label="Interior">
+                    <option value="Seat Cover">Seat Cover</option>
+                    <option value="Floor Mats">Floor Mats</option>
+                    <option value="Dashboard Kit">Dashboard Kit</option>
+                    <option value="Steering Cover">Steering Cover</option>
+                    <option value="Sun Shade">Sun Shade</option>
+                    <option value="Neck Pillow">Neck Pillow</option>
+                    <option value="Cushion Set">Cushion Set</option>
+                </optgroup>
+                <optgroup label="Electronics">
+                    <option value="Reverse Camera">Reverse Camera</option>
+                    <option value="Parking Sensors">Parking Sensors</option>
+                    <option value="Music System">Music System</option>
+                    <option value="Speaker Set">Speaker Set</option>
+                    <option value="LED Lights">LED Lights</option>
+                    <option value="Fog Lamps">Fog Lamps</option>
+                </optgroup>
+                <optgroup label="Other">
+                    <option value="First Aid Kit">First Aid Kit</option>
+                    <option value="Tool Kit">Tool Kit</option>
+                    <option value="Jerry Can">Jerry Can</option>
+                    <option value="Tow Hook">Tow Hook</option>
+                    <option value="custom">✏️ Custom Item...</option>
+                </optgroup>
+            </select>
+        </div>
+        <div class="form-group custom-item-group hidden">
+            <label>Custom Item Name</label>
+            <input type="text" name="customItem[]" class="custom-item-input" placeholder="Enter custom accessory name">
         </div>
         <div class="form-row">
             <div class="form-group">
@@ -118,8 +159,8 @@ function addItem() {
     `;
     itemsContainer.appendChild(itemCard);
 
-    // Focus on the new item description field
-    itemCard.querySelector('input[name="itemDescription[]"]').focus();
+    // Focus on the accessory dropdown
+    itemCard.querySelector('select[name="accessorySelect[]"]').focus();
 
     // Animate the new card
     itemCard.style.opacity = '0';
@@ -131,6 +172,23 @@ function addItem() {
     }, 10);
 
     updateItemNumbers();
+}
+
+// Handle accessory dropdown selection
+function handleAccessorySelect(select) {
+    const card = select.closest('.item-card');
+    const customGroup = card.querySelector('.custom-item-group');
+    const customInput = card.querySelector('.custom-item-input');
+
+    if (select.value === 'custom') {
+        customGroup.classList.remove('hidden');
+        customInput.required = true;
+        customInput.focus();
+    } else {
+        customGroup.classList.add('hidden');
+        customInput.required = false;
+        customInput.value = '';
+    }
 }
 
 function removeItem(button) {
@@ -181,8 +239,17 @@ function getItems() {
     const items = [];
 
     cards.forEach(card => {
+        const select = card.querySelector('select[name="accessorySelect[]"]');
+        const customInput = card.querySelector('input[name="customItem[]"]');
+
+        // Get description from dropdown or custom input
+        let description = select.value;
+        if (description === 'custom' && customInput) {
+            description = customInput.value.trim();
+        }
+
         items.push({
-            description: card.querySelector('input[name="itemDescription[]"]').value.trim(),
+            description: description,
             partNo: card.querySelector('input[name="partNo[]"]').value.trim(),
             amount: parseFloat(card.querySelector('input[name="amount[]"]').value) || 0
         });
@@ -198,6 +265,8 @@ function resetItems() {
         if (index === 0) {
             // Clear first card
             card.querySelectorAll('input').forEach(input => input.value = '');
+            card.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+            card.querySelector('.custom-item-group')?.classList.add('hidden');
         } else {
             // Remove other cards
             card.remove();

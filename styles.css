@@ -338,6 +338,31 @@ body {
     text-align: center;
 }
 
+/* Custom item input */
+.hidden {
+    display: none !important;
+}
+
+.custom-item-group {
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.accessory-select {
+    font-size: 0.95rem;
+}
+
 .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
