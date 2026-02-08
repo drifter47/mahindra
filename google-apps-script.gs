@@ -11,6 +11,8 @@
  * 7. Set 'Who has access': 'Anyone'
  * 8. Click 'Deploy' and copy the Web App URL
  * 9. Replace YOUR_GOOGLE_APPS_SCRIPT_URL_HERE in script.js with the URL
+ * 
+ * UPDATE: Each item is now stored as a separate row for easy searching!
  */
 
 // Sheet configuration
@@ -45,37 +47,71 @@ function doGet(e) {
 
 /**
  * Handle POST requests - Submit new order
+ * Creates a separate row for each item in the order
  */
 function doPost(e) {
   try {
     const sheet = getOrCreateSheet();
     const data = JSON.parse(e.postData.contents);
     
-    // Generate serial number (resets daily)
-    const slNo = generateDailySerialNumber(sheet);
+    // Generate base serial number (resets daily)
+    const baseSlNo = generateDailySerialNumber(sheet);
     
-    // Prepare row data matching the header columns
-    const row = [
-      slNo,                           // Sl No.
-      data.date || new Date(),        // Date
-      data.otfNo || '',               // OTF No.
-      data.customerName || '',        // Customer Name
-      data.vehicleModel || '',        // Vehicle Model
-      data.chassisNo || '',           // Chassis No.
-      data.itemDescription || '',     // Item Description
-      data.partNo || '',              // Part No.
-      data.amount || 0,               // Amount
-      data.totalAmount || 0,          // Total Amount
-      data.status || 'Pending',       // Status
-      data.remarks || '',             // Remarks
-      new Date()                      // Timestamp (extra column for tracking)
-    ];
+    // Get items array from the data
+    const items = data.items || [];
     
-    sheet.appendRow(row);
+    // If no items array, create single row from legacy format
+    if (items.length === 0) {
+      const row = [
+        baseSlNo,
+        data.date || new Date(),
+        data.otfNo || '',
+        data.customerName || '',
+        data.vehicleModel || '',
+        data.chassisNo || '',
+        data.itemDescription || '',
+        data.partNo || '',
+        data.amount || 0,
+        data.totalAmount || 0,
+        data.status || 'Pending',
+        data.remarks || '',
+        new Date()
+      ];
+      sheet.appendRow(row);
+    } else {
+      // Create a row for each item
+      const rows = items.map((item, index) => {
+        // Add item number suffix for multiple items (e.g., 20260208-001-A, 20260208-001-B)
+        const itemSuffix = items.length > 1 ? `-${String.fromCharCode(65 + index)}` : '';
+        const slNo = baseSlNo + itemSuffix;
+        
+        return [
+          slNo,                               // Sl No. with item suffix
+          data.date || new Date(),            // Date
+          data.otfNo || '',                   // OTF No.
+          data.customerName || '',            // Customer Name
+          data.vehicleModel || '',            // Vehicle Model
+          data.chassisNo || '',               // Chassis No.
+          item.description || '',             // Item Description (per item)
+          item.partNo || '',                  // Part No. (per item)
+          item.amount || 0,                   // Amount (per item)
+          data.totalAmount || 0,              // Total Amount (order total)
+          data.status || 'Pending',           // Status
+          data.remarks || '',                 // Remarks
+          new Date()                          // Timestamp
+        ];
+      });
+      
+      // Append all rows at once (more efficient)
+      if (rows.length > 0) {
+        sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+      }
+    }
     
     return createJsonResponse({ 
       success: true, 
-      slNo: slNo,
+      slNo: baseSlNo,
+      itemCount: items.length || 1,
       message: 'Order saved successfully' 
     });
   } catch (error) {
@@ -125,7 +161,7 @@ function getOrCreateSheet() {
     sheet.setFrozenRows(1);
     
     // Set column widths
-    sheet.setColumnWidth(1, 120);  // Sl No.
+    sheet.setColumnWidth(1, 130);  // Sl No.
     sheet.setColumnWidth(2, 100);  // Date
     sheet.setColumnWidth(3, 100);  // OTF No.
     sheet.setColumnWidth(4, 150);  // Customer Name
@@ -154,11 +190,13 @@ function generateDailySerialNumber(sheet) {
   const data = sheet.getDataRange().getValues();
   let maxNum = 0;
   
-  // Find the highest number for today
+  // Find the highest base number for today (ignore -A, -B suffixes)
   for (let i = 1; i < data.length; i++) {
     const slNo = String(data[i][0]);
-    if (slNo.startsWith(dateStr + '-')) {
-      const num = parseInt(slNo.split('-')[1], 10);
+    // Match pattern: YYYYMMDD-NNN or YYYYMMDD-NNN-X
+    const match = slNo.match(new RegExp(`^${dateStr}-(\\d+)`));
+    if (match) {
+      const num = parseInt(match[1], 10);
       if (num > maxNum) {
         maxNum = num;
       }
