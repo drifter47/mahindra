@@ -72,6 +72,20 @@ function incrementAccessoryUsage(name) {
     localStorage.setItem('accessoryUsage', JSON.stringify(usage));
 }
 
+// Custom items management
+function getCustomItems() {
+    return JSON.parse(localStorage.getItem('customAccessories') || '[]');
+}
+
+function saveCustomItem(name, partNo = '') {
+    const customs = getCustomItems();
+    // Check if already exists
+    if (!customs.find(c => c.name.toLowerCase() === name.toLowerCase())) {
+        customs.push({ name: name, partNo: partNo });
+        localStorage.setItem('customAccessories', JSON.stringify(customs));
+    }
+}
+
 // Get sorted accessories (frequently used first)
 function getSortedAccessories() {
     const usage = getAccessoryUsage();
@@ -92,19 +106,40 @@ function getSortedAccessories() {
 // Generate dropdown HTML dynamically
 function generateDropdownHTML() {
     const { frequent, others } = getSortedAccessories();
+    const customItems = getCustomItems();
+    const usage = getAccessoryUsage();
+
     let html = '<option value="">-- Select Accessory --</option>';
 
-    if (frequent.length > 0) {
+    // Frequently used (including custom items that have been used)
+    const allFrequent = [...frequent];
+    customItems.forEach(c => {
+        if (usage[c.name] >= 1) {
+            allFrequent.push({ ...c, count: usage[c.name] });
+        }
+    });
+    allFrequent.sort((a, b) => b.count - a.count);
+
+    if (allFrequent.length > 0) {
         html += '<optgroup label="⭐ Frequently Used">';
-        frequent.forEach(a => html += `<option value="${a.name}">${a.name}</option>`);
+        allFrequent.forEach(a => html += `<option value="${a.name}">${a.name}</option>`);
         html += '</optgroup>';
     }
 
+    // Custom items (that haven't been used yet)
+    const unusedCustoms = customItems.filter(c => !usage[c.name] || usage[c.name] < 1);
+    if (unusedCustoms.length > 0) {
+        html += '<optgroup label="📝 Your Custom Items">';
+        unusedCustoms.forEach(a => html += `<option value="${a.name}">${a.name}</option>`);
+        html += '</optgroup>';
+    }
+
+    // All standard accessories
     html += '<optgroup label="All Accessories">';
     others.forEach(a => html += `<option value="${a.name}">${a.name}</option>`);
     html += '</optgroup>';
 
-    html += '<optgroup label="Other"><option value="custom">✏️ Custom Item...</option></optgroup>';
+    html += '<optgroup label="Other"><option value="custom">✏️ Add New Custom Item...</option></optgroup>';
     return html;
 }
 
@@ -310,17 +345,22 @@ function getItems() {
     cards.forEach(card => {
         const select = card.querySelector('select[name="accessorySelect[]"]');
         const customInput = card.querySelector('input[name="customItem[]"]');
+        const partNoInput = card.querySelector('input[name="partNo[]"]');
 
         // Get description from dropdown or custom input
         let description = select.value;
+        let isCustom = false;
+
         if (description === 'custom' && customInput) {
             description = customInput.value.trim();
+            isCustom = true;
         }
 
         items.push({
             description: description,
-            partNo: card.querySelector('input[name="partNo[]"]').value.trim(),
-            amount: parseFloat(card.querySelector('input[name="amount[]"]').value) || 0
+            partNo: partNoInput.value.trim(),
+            amount: parseFloat(card.querySelector('input[name="amount[]"]').value) || 0,
+            isCustom: isCustom
         });
     });
 
@@ -454,9 +494,14 @@ async function handleFormSubmit(e) {
             showToast('Order submitted successfully!', 'success');
         }
 
-        // Track accessory usage for smart sorting
+        // Track accessory usage for smart sorting and save custom items
         items.forEach(item => {
             if (item.description && item.description !== 'custom') {
+                // Save custom items for future use
+                if (item.isCustom) {
+                    saveCustomItem(item.description, item.partNo);
+                }
+                // Track usage
                 incrementAccessoryUsage(item.description);
             }
         });
