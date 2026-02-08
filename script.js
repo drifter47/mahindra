@@ -1,6 +1,6 @@
 // ===== Configuration =====
 // Replace this URL with your Google Apps Script Web App URL after deployment
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxTvTLlX38dmos_MI-PWh9cE4cCk6nO4RlwDMEx3QgIdq43yZDBQA-CD-02gjmy64ru/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyduBHDWBMwpToBXgo8VdfZrwljAWD7PLdjG5a1RSWBzgM4TnBB-rdsI6ES7AKZERep/exec';
 
 // ===== DOM Elements =====
 const orderForm = document.getElementById('orderForm');

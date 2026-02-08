@@ -218,9 +218,52 @@ function createJsonResponse(data) {
 
 /**
  * Test function - Run this to verify the script works
+ * Click the ▶️ button to run, then check View > Logs
  */
 function testScript() {
   const sheet = getOrCreateSheet();
-  Logger.log('Sheet created/found: ' + sheet.getName());
-  Logger.log('Next serial number would be: ' + generateDailySerialNumber(sheet));
+  Logger.log('✅ Sheet created/found: ' + sheet.getName());
+  Logger.log('✅ Next serial number would be: ' + generateDailySerialNumber(sheet));
+  Logger.log('✅ Sheet has ' + sheet.getLastRow() + ' rows');
 }
+
+/**
+ * Test POST - Simulates a form submission
+ * Run this to test if data gets added to the sheet
+ */
+function testPost() {
+  // Simulate the data that would come from the web form
+  const testData = {
+    postData: {
+      contents: JSON.stringify({
+        slNo: 'TEST-001',
+        date: new Date().toISOString().split('T')[0],
+        otfNo: 'TEST-OTF-123',
+        customerName: 'Test Customer',
+        vehicleModel: 'Thar',
+        chassisNo: 'ABC123',
+        itemDescription: 'Test Item',
+        partNo: 'TP-001',
+        amount: 1000,
+        totalAmount: 1000,
+        status: 'Pending',
+        remarks: 'Test entry',
+        items: [
+          { description: 'Floor Mat', partNo: 'FM-001', amount: 500 },
+          { description: 'Seat Cover', partNo: 'SC-001', amount: 500 }
+        ]
+      })
+    }
+  };
+  
+  try {
+    const result = doPost(testData);
+    const response = JSON.parse(result.getContent());
+    Logger.log('✅ SUCCESS: ' + JSON.stringify(response));
+    Logger.log('✅ Check your sheet - new rows should be added!');
+  } catch (error) {
+    Logger.log('❌ ERROR: ' + error.message);
+    Logger.log('Stack: ' + error.stack);
+  }
+}
+
