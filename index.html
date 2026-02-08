@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Mahindra Showroom Order Taking Form - Digital accessory order management">
+    <title>Mahindra OTF | Order Taking Form</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="logo">M</div>
+                    <div class="brand-text">
+                        <h1>Mahindra</h1>
+                        <span>Order Taking Form</span>
+                    </div>
+                </div>
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+                    <span class="theme-icon">🌙</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tabs">
+            <button class="tab active" data-tab="form">New Order</button>
+            <button class="tab" data-tab="history">Order History</button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- New Order Form -->
+            <section class="tab-content active" id="form-section">
+                <form id="orderForm" class="order-form">
+                    <!-- Serial Number & Date Row -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="slNo">Sl No.</label>
+                            <input type="text" id="slNo" name="slNo" readonly class="readonly-field">
+                            <span class="helper-text">Auto-generated daily</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="date">Date</label>
+                            <input type="date" id="date" name="date" required>
+                        </div>
+                    </div>
+
+                    <!-- OTF Number -->
+                    <div class="form-group">
+                        <label for="otfNo">OTF No. <span class="required">*</span></label>
+                        <input type="text" id="otfNo" name="otfNo" placeholder="Enter OTF Number" required>
+                    </div>
+
+                    <!-- Customer Details -->
+                    <div class="section-title">Customer Details</div>
+                    
+                    <div class="form-group">
+                        <label for="customerName">Customer Name <span class="required">*</span></label>
+                        <input type="text" id="customerName" name="customerName" placeholder="Enter customer name" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="vehicleModel">Vehicle Model <span class="required">*</span></label>
+                            <select id="vehicleModel" name="vehicleModel" required>
+                                <option value="">Select Model</option>
+                                <optgroup label="SUVs">
+                                    <option value="Thar">Thar</option>
+                                    <option value="Thar Roxx">Thar Roxx</option>
+                                    <option value="Scorpio N">Scorpio N</option>
+                                    <option value="Scorpio Classic">Scorpio Classic</option>
+                                    <option value="XUV700">XUV700</option>
+                                    <option value="XUV400">XUV400</option>
+                                    <option value="XUV3XO">XUV3XO</option>
+                                    <option value="BE 6">BE 6</option>
+                                </optgroup>
+                                <optgroup label="Commercial">
+                                    <option value="Bolero">Bolero</option>
+                                    <option value="Bolero Neo">Bolero Neo</option>
+                                    <option value="Bolero Camper">Bolero Camper</option>
+                                    <option value="Pickup">Pickup</option>
+                                </optgroup>
+                                <optgroup label="Other">
+                                    <option value="Marazzo">Marazzo</option>
+                                    <option value="Other">Other</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="chassisNo">Chassis No. <span class="required">*</span></label>
+                            <input type="text" id="chassisNo" name="chassisNo" placeholder="Last 6 digits" required maxlength="17">
+                        </div>
+                    </div>
+
+                    <!-- Item Details -->
+                    <div class="section-title">Item Details</div>
+
+                    <div class="form-group">
+                        <label for="itemDescription">Item Description <span class="required">*</span></label>
+                        <textarea id="itemDescription" name="itemDescription" rows="3" placeholder="Describe the accessory item(s)" required></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="partNo">Part No.</label>
+                            <input type="text" id="partNo" name="partNo" placeholder="Part number">
+                        </div>
+                        <div class="form-group">
+                            <label for="amount">Amount (₹) <span class="required">*</span></label>
+                            <input type="number" id="amount" name="amount" placeholder="0" min="0" step="0.01" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="totalAmount">Total Amount (₹) <span class="required">*</span></label>
+                        <input type="number" id="totalAmount" name="totalAmount" placeholder="0" min="0" step="0.01" required>
+                    </div>
+
+                    <!-- Status & Remarks -->
+                    <div class="section-title">Status</div>
+
+                    <div class="form-group">
+                        <label for="status">Order Status <span class="required">*</span></label>
+                        <select id="status" name="status" required>
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="remarks">Remarks</label>
+                        <textarea id="remarks" name="remarks" rows="2" placeholder="Any additional notes..."></textarea>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="submit-btn" id="submitBtn">
+                        <span class="btn-text">Submit Order</span>
+                        <span class="btn-loader hidden"></span>
+                    </button>
+                </form>
+            </section>
+
+            <!-- Order History -->
+            <section class="tab-content" id="history-section">
+                <div class="history-controls">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search orders...">
+                    <button class="refresh-btn" id="refreshBtn">↻ Refresh</button>
+                </div>
+                <div class="orders-list" id="ordersList">
+                    <div class="loading-state">Loading orders...</div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Toast Notification -->
+        <div class="toast" id="toast">
+            <span class="toast-message"></span>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

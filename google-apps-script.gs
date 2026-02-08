@@ -1,0 +1,188 @@
+/**
+ * Mahindra Order Taking Form - Google Apps Script
+ * 
+ * SETUP INSTRUCTIONS:
+ * 1. Open your Google Sheet
+ * 2. Go to Extensions > Apps Script
+ * 3. Delete any code in the editor and paste this entire script
+ * 4. Click 'Deploy' > 'New deployment'
+ * 5. Select Type: 'Web app'
+ * 6. Set 'Execute as': 'Me'
+ * 7. Set 'Who has access': 'Anyone'
+ * 8. Click 'Deploy' and copy the Web App URL
+ * 9. Replace YOUR_GOOGLE_APPS_SCRIPT_URL_HERE in script.js with the URL
+ */
+
+// Sheet configuration
+const SHEET_NAME = 'Orders'; // Name of the sheet tab
+
+/**
+ * Handle GET requests - Retrieve orders
+ */
+function doGet(e) {
+  try {
+    const sheet = getOrCreateSheet();
+    const data = sheet.getDataRange().getValues();
+    
+    if (data.length <= 1) {
+      return createJsonResponse([]);
+    }
+    
+    const headers = data[0];
+    const orders = data.slice(1).map(row => {
+      const order = {};
+      headers.forEach((header, index) => {
+        order[header] = row[index];
+      });
+      return order;
+    }).reverse(); // Most recent first
+    
+    return createJsonResponse(orders);
+  } catch (error) {
+    return createJsonResponse({ error: error.message });
+  }
+}
+
+/**
+ * Handle POST requests - Submit new order
+ */
+function doPost(e) {
+  try {
+    const sheet = getOrCreateSheet();
+    const data = JSON.parse(e.postData.contents);
+    
+    // Generate serial number (resets daily)
+    const slNo = generateDailySerialNumber(sheet);
+    
+    // Prepare row data matching the header columns
+    const row = [
+      slNo,                           // Sl No.
+      data.date || new Date(),        // Date
+      data.otfNo || '',               // OTF No.
+      data.customerName || '',        // Customer Name
+      data.vehicleModel || '',        // Vehicle Model
+      data.chassisNo || '',           // Chassis No.
+      data.itemDescription || '',     // Item Description
+      data.partNo || '',              // Part No.
+      data.amount || 0,               // Amount
+      data.totalAmount || 0,          // Total Amount
+      data.status || 'Pending',       // Status
+      data.remarks || '',             // Remarks
+      new Date()                      // Timestamp (extra column for tracking)
+    ];
+    
+    sheet.appendRow(row);
+    
+    return createJsonResponse({ 
+      success: true, 
+      slNo: slNo,
+      message: 'Order saved successfully' 
+    });
+  } catch (error) {
+    return createJsonResponse({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+}
+
+/**
+ * Get or create the Orders sheet with headers
+ */
+function getOrCreateSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEET_NAME);
+  
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+    
+    // Add headers
+    const headers = [
+      'Sl No.',
+      'Date',
+      'OTF No.',
+      'Customer Name',
+      'Vehicle Model',
+      'Chassis No.',
+      'Item Description',
+      'Part No.',
+      'Amount',
+      'Total Amount',
+      'Status',
+      'Remarks',
+      'Timestamp'
+    ];
+    
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    
+    // Format header row
+    const headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setBackground('#B91C1C');
+    headerRange.setFontColor('#FFFFFF');
+    headerRange.setFontWeight('bold');
+    
+    // Freeze header row
+    sheet.setFrozenRows(1);
+    
+    // Set column widths
+    sheet.setColumnWidth(1, 120);  // Sl No.
+    sheet.setColumnWidth(2, 100);  // Date
+    sheet.setColumnWidth(3, 100);  // OTF No.
+    sheet.setColumnWidth(4, 150);  // Customer Name
+    sheet.setColumnWidth(5, 120);  // Vehicle Model
+    sheet.setColumnWidth(6, 120);  // Chassis No.
+    sheet.setColumnWidth(7, 200);  // Item Description
+    sheet.setColumnWidth(8, 100);  // Part No.
+    sheet.setColumnWidth(9, 100);  // Amount
+    sheet.setColumnWidth(10, 100); // Total Amount
+    sheet.setColumnWidth(11, 100); // Status
+    sheet.setColumnWidth(12, 150); // Remarks
+    sheet.setColumnWidth(13, 150); // Timestamp
+  }
+  
+  return sheet;
+}
+
+/**
+ * Generate daily serial number (resets to 1 each day)
+ */
+function generateDailySerialNumber(sheet) {
+  const today = new Date();
+  const dateStr = Utilities.formatDate(today, Session.getScriptTimeZone(), 'yyyyMMdd');
+  
+  // Get all existing serial numbers
+  const data = sheet.getDataRange().getValues();
+  let maxNum = 0;
+  
+  // Find the highest number for today
+  for (let i = 1; i < data.length; i++) {
+    const slNo = String(data[i][0]);
+    if (slNo.startsWith(dateStr + '-')) {
+      const num = parseInt(slNo.split('-')[1], 10);
+      if (num > maxNum) {
+        maxNum = num;
+      }
+    }
+  }
+  
+  // Return next serial number
+  const nextNum = maxNum + 1;
+  return `${dateStr}-${String(nextNum).padStart(3, '0')}`;
+}
+
+/**
+ * Create JSON response
+ */
+function createJsonResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Test function - Run this to verify the script works
+ */
+function testScript() {
+  const sheet = getOrCreateSheet();
+  Logger.log('Sheet created/found: ' + sheet.getName());
+  Logger.log('Next serial number would be: ' + generateDailySerialNumber(sheet));
+}
