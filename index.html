@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
+
 <body>
     <div class="app-container">
         <!-- Header -->
@@ -58,10 +60,11 @@
 
                     <!-- Customer Details -->
                     <div class="section-title">Customer Details</div>
-                    
+
                     <div class="form-group">
                         <label for="customerName">Customer Name <span class="required">*</span></label>
-                        <input type="text" id="customerName" name="customerName" placeholder="Enter customer name" required>
+                        <input type="text" id="customerName" name="customerName" placeholder="Enter customer name"
+                            required>
                     </div>
 
                     <div class="form-row">
@@ -93,32 +96,48 @@
                         </div>
                         <div class="form-group">
                             <label for="chassisNo">Chassis No. <span class="required">*</span></label>
-                            <input type="text" id="chassisNo" name="chassisNo" placeholder="Last 6 digits" required maxlength="17">
+                            <input type="text" id="chassisNo" name="chassisNo" placeholder="Last 6 digits" required
+                                maxlength="17">
                         </div>
                     </div>
 
                     <!-- Item Details -->
-                    <div class="section-title">Item Details</div>
-
-                    <div class="form-group">
-                        <label for="itemDescription">Item Description <span class="required">*</span></label>
-                        <textarea id="itemDescription" name="itemDescription" rows="3" placeholder="Describe the accessory item(s)" required></textarea>
+                    <div class="section-title">
+                        Item Details
+                        <button type="button" class="add-item-btn" id="addItemBtn">+ Add Item</button>
                     </div>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="partNo">Part No.</label>
-                            <input type="text" id="partNo" name="partNo" placeholder="Part number">
-                        </div>
-                        <div class="form-group">
-                            <label for="amount">Amount (₹) <span class="required">*</span></label>
-                            <input type="number" id="amount" name="amount" placeholder="0" min="0" step="0.01" required>
+                    <div class="items-container" id="itemsContainer">
+                        <!-- Item 1 (default) -->
+                        <div class="item-card" data-item-index="0">
+                            <div class="item-header">
+                                <span class="item-number">Item 1</span>
+                                <button type="button" class="remove-item-btn" onclick="removeItem(this)"
+                                    title="Remove item">×</button>
+                            </div>
+                            <div class="form-group">
+                                <label>Item Description <span class="required">*</span></label>
+                                <input type="text" name="itemDescription[]" placeholder="Accessory name/description"
+                                    required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Part No.</label>
+                                    <input type="text" name="partNo[]" placeholder="Part number">
+                                </div>
+                                <div class="form-group">
+                                    <label>Amount (₹) <span class="required">*</span></label>
+                                    <input type="number" name="amount[]" placeholder="0" min="0" step="0.01" required
+                                        class="item-amount" onchange="calculateTotal()">
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="totalAmount">Total Amount (₹) <span class="required">*</span></label>
-                        <input type="number" id="totalAmount" name="totalAmount" placeholder="0" min="0" step="0.01" required>
+                    <div class="form-group total-group">
+                        <label for="totalAmount">Total Amount (₹)</label>
+                        <input type="text" id="totalAmount" name="totalAmount" readonly
+                            class="readonly-field total-display">
                     </div>
 
                     <!-- Status & Remarks -->
@@ -167,4 +186,5 @@
 
     <script src="script.js"></script>
 </body>
+
 </html>

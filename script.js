@@ -9,7 +9,6 @@ const btnText = submitBtn.querySelector('.btn-text');
 const btnLoader = submitBtn.querySelector('.btn-loader');
 const slNoInput = document.getElementById('slNo');
 const dateInput = document.getElementById('date');
-const amountInput = document.getElementById('amount');
 const totalAmountInput = document.getElementById('totalAmount');
 const themeToggle = document.getElementById('themeToggle');
 const themeIcon = themeToggle.querySelector('.theme-icon');
@@ -19,10 +18,13 @@ const ordersList = document.getElementById('ordersList');
 const searchInput = document.getElementById('searchInput');
 const refreshBtn = document.getElementById('refreshBtn');
 const toast = document.getElementById('toast');
+const itemsContainer = document.getElementById('itemsContainer');
+const addItemBtn = document.getElementById('addItemBtn');
 
 // ===== State =====
 let orders = [];
 let dailyCounter = 1;
+let itemCount = 1;
 
 // ===== Initialize App =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -30,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeDate();
     initializeSerialNumber();
     setupEventListeners();
+    calculateTotal();
 });
 
 // ===== Theme Management =====
@@ -87,6 +90,124 @@ function incrementSerialNumber() {
     updateSerialNumberDisplay();
 }
 
+// ===== Multi-Item Management =====
+function addItem() {
+    itemCount++;
+    const itemCard = document.createElement('div');
+    itemCard.className = 'item-card';
+    itemCard.dataset.itemIndex = itemCount - 1;
+    itemCard.innerHTML = `
+        <div class="item-header">
+            <span class="item-number">Item ${itemCount}</span>
+            <button type="button" class="remove-item-btn" onclick="removeItem(this)" title="Remove item">×</button>
+        </div>
+        <div class="form-group">
+            <label>Item Description <span class="required">*</span></label>
+            <input type="text" name="itemDescription[]" placeholder="Accessory name/description" required>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Part No.</label>
+                <input type="text" name="partNo[]" placeholder="Part number">
+            </div>
+            <div class="form-group">
+                <label>Amount (₹) <span class="required">*</span></label>
+                <input type="number" name="amount[]" placeholder="0" min="0" step="0.01" required class="item-amount" onchange="calculateTotal()">
+            </div>
+        </div>
+    `;
+    itemsContainer.appendChild(itemCard);
+
+    // Focus on the new item description field
+    itemCard.querySelector('input[name="itemDescription[]"]').focus();
+
+    // Animate the new card
+    itemCard.style.opacity = '0';
+    itemCard.style.transform = 'translateY(-10px)';
+    setTimeout(() => {
+        itemCard.style.transition = 'all 0.3s ease';
+        itemCard.style.opacity = '1';
+        itemCard.style.transform = 'translateY(0)';
+    }, 10);
+
+    updateItemNumbers();
+}
+
+function removeItem(button) {
+    const card = button.closest('.item-card');
+    const cards = itemsContainer.querySelectorAll('.item-card');
+
+    // Don't remove if it's the only item
+    if (cards.length <= 1) {
+        showToast('At least one item is required', 'error');
+        return;
+    }
+
+    // Animate removal
+    card.style.transition = 'all 0.3s ease';
+    card.style.opacity = '0';
+    card.style.transform = 'translateX(-20px)';
+
+    setTimeout(() => {
+        card.remove();
+        updateItemNumbers();
+        calculateTotal();
+    }, 300);
+}
+
+function updateItemNumbers() {
+    const cards = itemsContainer.querySelectorAll('.item-card');
+    cards.forEach((card, index) => {
+        card.querySelector('.item-number').textContent = `Item ${index + 1}`;
+        card.dataset.itemIndex = index;
+    });
+    itemCount = cards.length;
+}
+
+function calculateTotal() {
+    const amountInputs = document.querySelectorAll('.item-amount');
+    let total = 0;
+
+    amountInputs.forEach(input => {
+        const value = parseFloat(input.value) || 0;
+        total += value;
+    });
+
+    totalAmountInput.value = `₹ ${formatAmount(total)}`;
+}
+
+function getItems() {
+    const cards = itemsContainer.querySelectorAll('.item-card');
+    const items = [];
+
+    cards.forEach(card => {
+        items.push({
+            description: card.querySelector('input[name="itemDescription[]"]').value.trim(),
+            partNo: card.querySelector('input[name="partNo[]"]').value.trim(),
+            amount: parseFloat(card.querySelector('input[name="amount[]"]').value) || 0
+        });
+    });
+
+    return items;
+}
+
+function resetItems() {
+    // Keep only the first item card and clear it
+    const cards = itemsContainer.querySelectorAll('.item-card');
+    cards.forEach((card, index) => {
+        if (index === 0) {
+            // Clear first card
+            card.querySelectorAll('input').forEach(input => input.value = '');
+        } else {
+            // Remove other cards
+            card.remove();
+        }
+    });
+    itemCount = 1;
+    updateItemNumbers();
+    calculateTotal();
+}
+
 // ===== Event Listeners =====
 function setupEventListeners() {
     // Theme toggle
@@ -100,12 +221,8 @@ function setupEventListeners() {
     // Form submission
     orderForm.addEventListener('submit', handleFormSubmit);
 
-    // Auto-copy amount to total if total is empty
-    amountInput.addEventListener('input', () => {
-        if (!totalAmountInput.value) {
-            totalAmountInput.value = amountInput.value;
-        }
-    });
+    // Add item button
+    addItemBtn.addEventListener('click', addItem);
 
     // Search orders
     searchInput.addEventListener('input', filterOrders);
@@ -119,7 +236,6 @@ function setupEventListeners() {
         const today = new Date().toDateString();
 
         if (selectedDate !== today) {
-            // If selecting a different date, show a placeholder
             slNoInput.value = 'Will be assigned';
         } else {
             updateSerialNumberDisplay();
@@ -152,6 +268,17 @@ async function handleFormSubmit(e) {
     // Show loading state
     setLoadingState(true);
 
+    // Get items
+    const items = getItems();
+
+    // Calculate total from items
+    const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
+
+    // Format items for Google Sheets (as text)
+    const itemDescriptions = items.map(i => i.description).join(' | ');
+    const partNumbers = items.map(i => i.partNo || '-').join(' | ');
+    const amounts = items.map(i => `₹${i.amount}`).join(' | ');
+
     // Gather form data
     const formData = {
         slNo: slNoInput.value,
@@ -160,12 +287,13 @@ async function handleFormSubmit(e) {
         customerName: document.getElementById('customerName').value.trim(),
         vehicleModel: document.getElementById('vehicleModel').value,
         chassisNo: document.getElementById('chassisNo').value.trim(),
-        itemDescription: document.getElementById('itemDescription').value.trim(),
-        partNo: document.getElementById('partNo').value.trim(),
-        amount: parseFloat(document.getElementById('amount').value) || 0,
-        totalAmount: parseFloat(document.getElementById('totalAmount').value) || 0,
+        itemDescription: itemDescriptions,
+        partNo: partNumbers,
+        amount: amounts,
+        totalAmount: totalAmount,
         status: document.getElementById('status').value,
-        remarks: document.getElementById('remarks').value.trim()
+        remarks: document.getElementById('remarks').value.trim(),
+        items: items // Keep structured data for local storage
     };
 
     try {
@@ -195,6 +323,7 @@ async function handleFormSubmit(e) {
         orderForm.reset();
         initializeDate();
         updateSerialNumberDisplay();
+        resetItems();
 
     } catch (error) {
         console.error('Submission error:', error);
@@ -278,25 +407,31 @@ function renderOrders(ordersToRender) {
         return;
     }
 
-    ordersList.innerHTML = ordersToRender.map(order => `
-        <div class="order-card">
-            <div class="order-header">
-                <div>
-                    <div class="order-id">OTF: ${escapeHtml(order.otfNo || 'N/A')}</div>
-                    <div class="order-date">${formatDate(order.date)}</div>
+    ordersList.innerHTML = ordersToRender.map(order => {
+        // Count items if available
+        const itemCount = order.items ? order.items.length :
+            (order.itemDescription ? order.itemDescription.split(' | ').length : 1);
+
+        return `
+            <div class="order-card">
+                <div class="order-header">
+                    <div>
+                        <div class="order-id">OTF: ${escapeHtml(order.otfNo || 'N/A')}</div>
+                        <div class="order-date">${formatDate(order.date)} • ${itemCount} item(s)</div>
+                    </div>
+                    <span class="order-status status-${(order.status || 'pending').toLowerCase().replace(' ', '-')}">
+                        ${escapeHtml(order.status || 'Pending')}
+                    </span>
                 </div>
-                <span class="order-status status-${(order.status || 'pending').toLowerCase().replace(' ', '-')}">
-                    ${escapeHtml(order.status || 'Pending')}
-                </span>
+                <div class="order-customer">${escapeHtml(order.customerName || 'Unknown')}</div>
+                <div class="order-vehicle">${escapeHtml(order.vehicleModel || 'N/A')} • ${escapeHtml(order.chassisNo || 'N/A')}</div>
+                <div class="order-footer">
+                    <span class="order-amount">₹${formatAmount(order.totalAmount)}</span>
+                    <span class="order-id">#${escapeHtml(order.slNo || 'N/A')}</span>
+                </div>
             </div>
-            <div class="order-customer">${escapeHtml(order.customerName || 'Unknown')}</div>
-            <div class="order-vehicle">${escapeHtml(order.vehicleModel || 'N/A')} • ${escapeHtml(order.chassisNo || 'N/A')}</div>
-            <div class="order-footer">
-                <span class="order-amount">₹${formatAmount(order.totalAmount)}</span>
-                <span class="order-id">#${escapeHtml(order.slNo || 'N/A')}</span>
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // ===== Filter Orders =====
@@ -306,7 +441,8 @@ function filterOrders() {
         (order.customerName || '').toLowerCase().includes(query) ||
         (order.otfNo || '').toLowerCase().includes(query) ||
         (order.vehicleModel || '').toLowerCase().includes(query) ||
-        (order.chassisNo || '').toLowerCase().includes(query)
+        (order.chassisNo || '').toLowerCase().includes(query) ||
+        (order.itemDescription || '').toLowerCase().includes(query)
     );
     renderOrders(filtered);
 }
